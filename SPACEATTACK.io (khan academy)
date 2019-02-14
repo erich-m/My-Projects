@@ -1,0 +1,845 @@
+/***SCREEN SIZE 600x600
+ * 
+ * 
+ * Error Codes:
+ * 
+ * Severe Lag: Code 1
+ * Collisions:
+    Enemy with Missile: Code 2.1
+    Enemy with Shooter: Code 2.2
+    Missile with Edge of the Arena: Code 2.3  
+ * Premature Death: Code 3.14159
+**/
+
+
+
+
+/**
+ * Read this first though
+ * 
+ * 
+ * This is SPACE ATTACK .io
+ * 
+ * 
+ * 
+ * When I first started this project, I was so focused on making a game that I didnt go through the tutorials. My first plan was to make a maze game that would be completely random. Though techniques came out of that such as the get(x,y) for wall detection and scene number chages, I felt that I could have done a better game with the information I neglected. So I went back to the drawing board and came up with a different and better idea: space attack . io. At first, I was taking things one step at a time, working through it piece by piece, but things got messy near the end. One thing that I should have done but didn't was store all of the enemy data in one array rather than having all my variables scattered, but I had finished the game portion and I didn't want it breaking. The other thing was that I was going to make a real leaderboard, but that was too much work with files and privacy issues and so forth. I was also going to make a username system for it but that wasn't going to work either (although I did get a textbox sort of thing to function). Lastly, there were some errors that my game testers (total of 15 people) reported to me, most of which I already knew about. These errors are listed above and I am hoping you will excuse them. I COULD NOT figure out what was happening. And as for the "efficient memory" on the rubric, I felt as though the fact that I was deleting 5 objects at once with each enemy and missile was not efficient and I am hoping that because I cleaned those up, that I will do well on that part. And this was alot of commenting so you can probably see where I got bored and chunk-commented.
+ * */
+{
+var enemiesKilled = 0;//Counts every time a missile kills and enemy
+var enemyWidth = 20;//Default enemy width
+var enemyHeight = 20;//Default enemy height
+var wallRad = 150;//Player circle diameter (not radius lol)
+var center = new PVector(width/2,height/2);//PVector for the center and center calculations
+var enemyNum = 10;//Max number of enemies that can spawn
+var updatedEnemyCount = 0;//Variable to count the enemies
+var enemyArray = [];//Array that will store the enemy objects
+var health = enemyNum * 5;//Player health
+var typeOveride = false;//Testing option to override the type
+var createType = 3 ;//Override the type to become this
+var missileArray = [];//Stores the missiles
+var missileSize = 10;//Default missile size
+var counter = 0;//Draw loop counter
+var secondT = 0;//Game seconds
+var minuteT = 0;//Game minutes
+var hourT = 0;//Game hours
+var corner = new PVector(0,0);//PVector that stores the corner
+var keyP = 0;//Gets rid of spammm
+var spamOnOff = false;//False is spam off. True is spam on
+/**Parameter method
+ * Constructer function for enemies, missile and wall
+ * Parameters include x,y,w,h for the size and location of the object sub classes
+ * */
+var centerBasedConstruct = function(x,y,w,h){//Object that has an x,y,w and h for an ellipse//Used by the wall and the enemy as well as the missile
+    this.mid = new PVector(width/2,height/2);//The middile of the screen (used in calculations)
+    this.w = w;//Width of ellipse
+    this.h = h;//Height of ellipse
+    this.pos = new PVector(x,y);//Position of object saved with PVector
+    this.r = this.pos.dist(this.mid);//Calculates a rotating radius )for enemies
+};
+/**Parameter method
+ * Object which creates the player
+ * Parameters include an x,y,w,h for the size and location of the wall
+ * */
+var Wall = function(x,y,w,h){//The wall object which contains the properties of the player
+    centerBasedConstruct.call(this,x,y,w,h);//Used the center construct
+    this.radius = this.w/2;//Calculates a radius of the wall
+    /**Void method
+ * Draws and updates the line//Modified version of the conceot shown in the vector tutorials 
+ * */
+    this.aim = function(){//Draws the line that points from the middile to the mouse location//No parameters
+    this.mouse = new PVector(mouseX,mouseY);//Keeps track of the mouse but used in calculations so it is separate
+    this.corner = new PVector(this.pos.x,this.pos.y);//Keeps track of a special corner and used in calculations so it is also separate
+    this.mouse.sub(this.corner);//Subtracts the corner from the cursor
+    this.mouse.normalize();//Makes the vetor a unit of one
+    this.mouse.mult(((this.w/2) + (this.h/2))/2);//Makes the vector the radius of the wall
+    translate(this.pos.x,this.pos.y);//Translates to the center of the screen
+    line(0,0,this.mouse.x,this.mouse.y);//Draws the line
+    popMatrix();//Unfixes the matrix
+    fill(0, 0, 0);//Fill the wall black
+    ellipse(this.pos.x,this.pos.y,this.w/5 * 3,this.h/5 * 3);//Draw inner circle
+    fill(0,255,0);//Fill text green
+    textSize(this.w/2.85);//Sets text size
+    text(health,this.pos.x,this.pos.y);//Prints health on the screen infront of the player
+    textSize(this.w/8);//Sets text size
+    text(hourT + ":" + minuteT + ":" + secondT,this.pos.x ,this.pos.y + this.w/5);//Prints out the users current time
+    };
+};Wall.prototype = Object.create(centerBasedConstruct);//Calls the object based construct on the wall
+/**Void method
+ * Draws the wall 
+ * */
+Wall.prototype.draw = function(){//Draw function specifically for the wall
+    stroke(0, 255, 0);//Line color green
+    fill(0, 0, 0);//Fill black
+    ellipse(this.pos.x,this.pos.y,this.w,this.h);//Draws ellipse at position
+    textAlign(CENTER,CENTER);//Aligns text to be printed
+    this.aim();//Sets the line for the aiming
+};
+var wall = new Wall(width/2,height/2,wallRad,wallRad);//Sets wall as a Wall object
+/**Parameter method
+ * Parameters include an x,y,w,h for the size and location of the missile
+ * */
+var Missile = function(x,y,index){//Missile object with x,y and index in missile array as parameters
+    centerBasedConstruct.call(this,x,y,missileSize,missileSize);//Also uses center based construct
+    this.index = index;//Stores the missiles index
+    this.r = (missileSize /2 + missileSize/2)/2;//Calculates the radius
+};
+Missile.prototype = Object.create(centerBasedConstruct);//Calls the object class on the missile
+/**Void method
+ * Draws the missile
+ * */
+Missile.prototype.draw = function() {//Function to draw the missiles
+    stroke(251, 255, 0);//Line color yellow
+    noFill();//No fill of the enemy
+    ellipse(wall.pos.x + this.pos.x,wall.pos.y + this.pos.y,this.w,this.h);//Its initial position is at the pos of the line of wall
+};
+/**Void method
+ * Updates the missiles location
+ * */
+Missile.prototype.update = function(){//Update function for the missiles
+    this.pos.add(5 * (this.pos.x/(sqrt(sq(this.pos.x) + sq(this.pos.y)))),5 * (this.pos.y/(sqrt(sq(this.pos.x) + sq(this.pos.y)))));//Calculates the slope from the pos to the center, normalizes it, and then mutliplies it by 5, and then adds it to its position
+};
+/**Parameter method
+ * Parameters include an x,y,w,h for the default size and location of the enemy
+ * */
+var Enemy = function(x,y,w,h,t,i){//Enemy function that takes x,y,w,h and index in enemy array
+    centerBasedConstruct.call(this,x,y,w,h);//Calls center construct
+    this.type = t;//Stores the type of enemy
+    this.index = i;//Stores index in array
+    this.radius = this.w/2;//Calculates radius of the enemy
+    this.c = color(0);
+    this.enemyData = [this.HP,this.Damage,this.rot,this.f,this.giveHP];//Contains data used for calculations such as its HP, damage, rotation and forward speed, and its donation value
+    if (this.type === 1){//If type 1, set enemy data to the following
+        this.enemyData = [2,1,1,1,0];
+    }
+    if (this.type === 2){//If type 2, set enemy data to the following
+        this.enemyData = [1,2,1.5,2.5,0];
+    }
+    if (this.type === 3){//If type 3, set enemy data to the following
+        this.enemyData = [2,5,1,1,0];
+    }
+    if (this.type === 4){//If type 4, set enemy data to the following
+        this.enemyData = [5,10,0.1,0.4,0];
+    }
+    if (this.type === 5){//If type 5, set enemy data to the following
+        this.enemyData = [50,50,0.1,0.1,10];
+    }
+    this.newPoint = new PVector(200 - this.pos.x,200 - this.pos.y);//Creates a second vector for its position that can be used in equations and not edit the enemy position
+    //The following code determines which quadrant (if 0,0 was in the middle of the screen), and sets an initial angle for the enemy//Up to line 115, calculates angle if point is on an axis
+    if (this.newPoint.x === 0 && this.newPoint.y > 0){
+        this.angle = 90;
+    }else if (this.newPoint.x < 0 && this.newPoint.y === 0){
+        this.angle = 180;
+    }else if (this.newPoint.x === 0 && this.newPoint.y < 0){
+        this.angle = 270;
+    }else if (this.newPoint.x > 0 && this.newPoint.y === 0){
+        this.angle = 0;
+    }
+//Calculates angle based on quadrant. The angle is used to rotate the enemy
+    else if (this.newPoint.x > 0 && this.newPoint.y > 0 || this.newPoint.x < 0 && this.newPoint.y < 0){
+        this.angle = atan(abs(this.newPoint.y)/abs(this.newPoint.x));
+        if (this.newPoint.x < 0 && this.newPoint.y < 0){
+            this.angle += 180;
+        }
+    }else {
+        this.angle = atan(abs(this.newPoint.x)/abs(this.newPoint.y));
+        if (this.newPoint.x > 0 && this.newPoint.y < 0){
+            this.angle += 270;
+        }else {
+            this.angle += 90;
+        }
+    }
+};//Calculates angle based on quadrant
+Enemy.prototype = Object.create(centerBasedConstruct);//Calls the cenetr based construct for the enemy
+/**Void method
+ * Updates the enemy direction
+ * */
+Enemy.prototype.updateDirection = function(timer){//Updates the direction...everytime the timer parameter is % 30 === 0,the enemy chooses a direction(counterclockwise(2), clockwise(1) or toward the center(3))
+    if (timer % 30 === 0){
+        var type1Rand = round(random(1,90));//Gets random variable between 1 and 90 and is used to create weightings for the enemy movement. For example, normal will have a 33% chance of choosing each direction
+        //The following code has the if statements that control this.m (movement) based on pre-calculated weights
+        if (this.type === 1){
+            if (type1Rand <= 30){
+                this.m = 1;
+            }
+            if (type1Rand > 30 && type1Rand <= 60){
+                this.m = 2;
+            }
+            if (type1Rand > 60 && type1Rand <= 90){
+                this.m = 3;
+            }
+        }
+        if (this.type === 2){
+            if (type1Rand <= 36){
+                this.m = 1;
+            }
+            if (type1Rand > 36 && type1Rand <= 72){
+                this.m = 2;
+            }
+            if (type1Rand > 72 && type1Rand <= 90){
+                this.m = 3;
+            }
+        }
+        if (this.type === 3){
+            if (type1Rand <= 30){
+                this.m = 1;
+            }
+            if (type1Rand > 30 && type1Rand <= 60){
+                this.m = 2;
+            }
+            if (type1Rand > 60 && type1Rand <= 90){
+                this.m = 3;
+            }
+        }
+        if (this.type === 4){
+            if (type1Rand <= 10){
+                this.m = 1;
+            }
+            if (type1Rand > 10 && type1Rand <= 20){
+                this.m = 2;
+            }
+            if (type1Rand > 20 && type1Rand <= 90){
+                this.m = 3;
+            }
+        }
+        if (this.type === 5){
+            if (type1Rand <= 5){
+                this.m = 1;
+            }
+            if (type1Rand > 5 && type1Rand <= 10){
+                this.m = 2;
+            }
+            if (type1Rand > 10 && type1Rand <= 90){
+                this.m = 3;
+            }
+        }
+    }
+};
+/**Parameter method
+ * Updates the drawing of the enemy
+ * */
+Enemy.prototype.draw = function() {//Enemy function that changes theis.c(olor) based on the type
+    if (this.type === 1){
+    this.c =color(255, 0, 0);
+    }else if (this.type === 2){
+        this.c =color(255, 119, 0);
+    }else if (this.type === 3){
+        this.c =color(15, 15, 15);
+    }else if (this.type === 4){
+        this.c =color(191, 0, 255);
+    }else if (this.type === 5){
+        this.c=color(255, 255, 255);
+    }
+    stroke(this.c);//Creates stroke as this.c
+    strokeWeight(1);//Sets stroke thickness
+    noFill();//no fill for enemies
+    //The following code adjusts some of the size variables based on the enemy type
+    if (this.type === 2){
+        this.h =0.5 * enemyHeight;
+        this.w =0.5 * enemyWidth;
+        this.radius = this.w/2;
+    }
+    if (this.type === 4){
+        this.h =2 * enemyHeight;
+        this.w =2 * enemyWidth;
+        this.radius = this.w/2;
+    }
+    if (this.type === 5){
+        this.h = 5*enemyHeight;
+        this.w=5*enemyHeight;
+        this.radius = this.w/2;
+    }
+    ellipse(this.pos.x,this.pos.y,this.w,this.h);//Draws ellipse at the position with the width and height
+    resetMatrix();//Resets the matrix
+    fill(0);//Fills black
+    ellipse(this.pos.x,this.pos.y,this.w/4 * 3,this.h/4 * 3);//Draws inner circle
+    fill(this.c);//Fills text this.c
+    textAlign(CENTER,CENTER);//Aligns textX and textY via center
+    textSize(this.w/4 * 3);//Sets text size
+    text(this.enemyData[0],this.pos.x,this.pos.y);//Prints health of enemy
+    fill(0);//Fixes fill to 0
+};
+/**Void method
+ * Updates the enemy's position based on its movement
+ * */
+Enemy.prototype.update = function(){//Enemy update function to update the enemys position based on its movement
+    if (this.m === 1 || this.m === 2){//If this.m(ovement) is 1 or 2
+    this.r = this.pos.dist(this.mid);//Take enemy radius from center
+    //Rotate equation which calculates this.x and y using angle, radius and its center. 
+    /**Credit goes to https://www.youtube.com/watch?v=raXW5J1Te7Y**/
+    this.pos.x = this.mid.x + this.r * cos(this.angle + 180);
+    this.pos.y = this.mid.y + this.r * sin(this.angle + 180);
+    /**Credit goes to https://www.youtube.com/watch?v=raXW5J1Te7Y**/
+    if (this.angle >= 360){//if the angle exceeds 360, make it equal to 0
+        this.angle = 0;
+    }
+    else {
+        if (this.m === 1){//Rotate clockwise if 1 by adding rot speed
+    this.angle+=this.enemyData[2];
+        }
+        if (this.m === 2){///Rotate counter clockwise if 2 by subing rot speed
+            this.angle-=this.enemyData[2];
+        }
+    }}//Rotate
+    else if (this.m === 3){//If 3, calculate slope and sub from pos
+            //Move toward middle
+            //SLope = rise/run
+            this.slope = new PVector(this.pos.x - this.mid.x,this.pos.y - this.mid.y);
+            this.slope.normalize();//Normalizes slope and then mutliply it
+            this.slope.mult(this.enemyData[3]);
+            this.pos.sub(this.slope); //Subtract slope from position
+    }
+};
+//Enemy processings//
+
+var spawnLocations = [];//Array that will contain the spawnable locations for enemies
+var spawns = 0;//Counts the number of spawns and is used to save a vector to a new index
+var maxRadius = ((((width/2) - (wallRad/2))) * (9/10)) + (wallRad/2);//Max radius in which enemies can spawn
+var minRadius = ((((width/2) - (wallRad/2))) * (7.5/10)) + (wallRad/2);//Min radius in which enemies can spawn
+
+for (var xL = 0;xL < width;xL+=10){//Loops through x values to width
+    for (var yL = 0 ;yL < height;yL+=10){//Loops through y values to height
+        var currentXY = new PVector(xL,yL);//creates a PVector with the position
+        var distCalc = currentXY.dist(center);//Calculates the distance from the center
+        if (distCalc < maxRadius && distCalc > minRadius){//If that distance is between the two radii, add to array and increase spawns
+            spawnLocations[spawns] = currentXY;//Adds to spawnable locations of enemies
+            spawns++;//Increases spawn count
+        }
+    }
+}
+
+var randomSpawn = round(random(0,spawnLocations.length - 1));//Picks a random location to spawn in
+/**Function method
+ * No Parameters
+ * Chooses random type for the enemy
+ * Returns type
+ * */
+var typePicker = function(){//Randomly chooses the type of enemy to spawn based on pre-calculated weightings
+var randomType = round(random(1,100));//Random integer to choose the type of enemy
+var type;
+//Sets the type of enemy
+if (randomType <= 50){
+    type = 1;
+}if (randomType > 50 && randomType <= 80){
+    type = 2;
+}if (randomType > 80 && randomType <= 93){
+    type = 4;
+}if (randomType > 93){
+    type = 3;
+}//Sets the type of enemy
+if (typeOveride){//Allows testing to override the type and make it a value defined at the start
+    return createType;//Returns the type of enemy
+}
+else{
+return type;//Returns the type of enemy
+}
+};
+
+    /**Parameter method
+ * Parameters include an number of spawns, and some overide stuff for testing 
+ * */
+var respawn = function(numToSpawn,typeOverride,typeToMake){//Respawn function that takes a number of spawns, and an override option for the boss enemy
+for (var e = 0;e < numToSpawn;e++){//Loops through the enemies 
+    var t = typePicker();//Sets t as type the returned type
+if (typeOverride){//Override option with parameter
+    t = typeToMake;
+}
+    randomSpawn = round(random(0,spawnLocations.length - 1));//chooses random location
+    enemyArray.push(new Enemy(spawnLocations[randomSpawn].x,spawnLocations[randomSpawn].y,20,20,t,enemyArray.length));//Pushes a new enemy to the array
+    updatedEnemyCount++;//Adds to enemy count
+}
+};
+respawn(enemyNum);//Creates the enemies using respawn function
+/**Parameter method
+ * Parameters include an index of which to delete from array
+ * */
+var despawn = function(indexDespawning){//Despawn function that takes the index of which the enemy is in
+    var enemyIndex = enemyArray[indexDespawning].index;//Saves the index of the enemy
+    enemyArray.splice(enemyIndex,1);//Deletes the enemy from the array
+    updatedEnemyCount--;//Edits the enemy count
+    for (var editEnemyA = enemyIndex;editEnemyA <enemyArray.length;editEnemyA++){//Loops through the indexes of the enemies that are left and subtracts one from it to represent it's new position in the array
+        enemyArray[editEnemyA].index--;
+    }
+};
+/**Parameter method
+ * Parameters include an index of which missile to delete from the array
+ * */
+var despawnMissile = function(indexDespawning){//Applies the same despawn concept of splice and edit the rest of the indexes to match the locations to the missile object
+    var missileIndex = missileArray[indexDespawning].index;
+    missileArray.splice(missileIndex,1);
+    for (var editMissileA = missileIndex;editMissileA <missileArray.length;editMissileA++){
+        missileArray[editMissileA].index--;
+        
+    }
+};//Closes despawn missile
+//Enemy processings
+///////////////////////////////////////////////////////////1
+/**Function method
+ * Parameters include an radii as well as positions of the two objects
+ * Returns true or false based on positions
+ * */
+var checkEnemyFromCenter = function(eRadius,wRadius,ePos,wPos){//Function that returns true if the distance between the radii of the enemy and center is less than the wall radius.
+    var ewRadiusSum = eRadius + wRadius;
+    var ewDist = ePos.dist(wPos);
+    if (ewRadiusSum >= ewDist){
+        return true;//Returns true
+    }else{
+        return false;//Returns false
+    }
+};
+/**Function method
+ * Parameters include an radii as well as positions of the two objects
+ * Returns true or false based on positions
+ * */
+var checkMissileFromCenter = function(mPos,cPos,arenaSize){//Function that returns true if the distance between the radii of the missile and center is greater than the arena radius.
+   mPos.z = 0;//Fixes NaN error that was encountered
+    var mcDist = mPos.dist(cPos);
+    if (mcDist >= arenaSize){
+        return true;
+    }else {
+        return false;
+    }
+};
+/**Function method
+ * Parameters include an radii as well as positions of the two objects
+ * Returns true or false based on positions
+ * */
+var checkMissileFromEnemy = function(eRad,mRad,ePos,mPos){//Function that returns true if the distance between the radii of the enemy and missile is less than the sum of the radii.
+    var emRadiusSum = eRad + mRad;
+    var mPos = new PVector(mPos.x,mPos.y);//Fixes another error where this edited the actual missile position
+    mPos.add(center);
+    mPos.z = 0;
+    var emDist = mPos.dist(ePos);
+    if (emRadiusSum >= emDist){
+        return true;//Returns true
+    }else{
+        return false;//Returns false
+    }
+};
+/////////////////////////////////////////////////////////1
+var dead = 0;//Value that tells for statement if the player died
+var randomSpawner = round(random(0,100));//Setting and initializing of the random spawner variable which controls the amount of enemies to spawn
+var scene = 1;//Controls the scene if statements (1 is start screen, 2 is game screen, 3 is death screen)
+/**Void method
+ * Display for user interface
+ * */
+var howToPlay = function(){//Function that contians the code for the how to play hover button
+    textAlign(CENTER,CENTER);//Align text center
+    textFont(createFont("monospace Bold"));//Sets font
+    fill(0);//Fill black
+    stroke(0);//Black stroke
+    rect(0,0,width,height - 250);//Draws a background rectangle above bubles
+    fill(255,255,255);//Fill white
+    text("Welcome to SPACEATTACK.io!\nThe game of rage and fury!",width/2,40);//Title
+    textSize(15);//Sets size
+    text("Whether you know how to play or not, it is always good to know\n what challenges you are up against",width/2,85);//More text
+    textSize(11);//Sets text size
+    text("Your objectives are as follows: SURVIVE. \nHow do you do that? Aim with the cursor, click the spacebar to shoot. \nEach enemy moves differently so the scene will get very chaotic. \nIt is advised NOT TO SPAM CLICK, as it will lag the game. \nYour missiles, will do 1 point of damage to enemies. \nThe number on each enemy and yourself is a health level. \nAs more enemies complete their mission in targeting you, your health will go down. \nAs you shoot enemies, their health will go down. \nEvery 30 seconds, you will get a bonus 10 HP. \nAnd...if the boss enemy spawns and you kill it, you get 25 HP.\nYour goal is to last as long as you can",width/2,174);//Instructions on how to play
+    textSize(15);//Sets text size
+    //Prints enemy stats
+    text("Normal: \n2 HP\n1 Damage",83,330);
+    text("Speed: \n1 HP\n2 Damage",187,330);
+    text("Camo: \n2 HP\n5 Damage",427,344);
+    text("Large: \n5 HP\n5 Damage",543,343);
+    text("Boss:\n50 HP\n50 Damage\nGives 50 HP",width/2,293);
+    //Prints enemy stats
+    //Draws the different enemy circles so players know what to look for
+    fill(0);
+    stroke(255,0,0);
+    ellipse(77,300,20,20);
+    stroke(255, 119, 0);
+    ellipse(177,300,10,10);
+    stroke(0);
+    fill(255, 255, 255);
+    rect(404,284,15,30);
+    noFill();
+    stroke(13, 13, 13);
+    ellipse(421,300,20,20);
+    stroke(191, 0, 255);
+    ellipse(537,300,40,40);
+    stroke(255,255,255);
+    ellipse(width/2,308,100,100);
+    //Draws the different enemy circles so players know what to look for
+};
+/**Void method
+ * Display for user interface
+ * */
+var gamerFeedback = function(){//Gamer feedback function display
+//This function, which is text and background rectangle only, creates the gamer feedback display, so it includes fills of black and white, textSize changes and text statements which take up alot of the lines of code
+    fill(0);//Fill black
+    stroke(0);//No stroke
+    rect(0,0,width,height - 250);//Background box
+    fill(255,255,255);//Text colour
+    textSize(20);//Text size
+    text("GAMER FEEDBACK:\nHeres what our users have to say",width/2,20);//Title 
+    textSize(15);//Text size
+    text("To have your comments on here\ngo to this link: https://goo.gl/forms/L14NHZX17R7amNyI2",width/2,60);//More text
+    textSize(10);//More textSize
+    text("Very good detailed instructions. And very good job overall.--Kevin Fontyn\nIt is a very unique and creative idea for a game,\n with a wide range of different enemies at different difficulty levels.\nIt challenges the gamer and keeps them wanting to play,\nwith very few/no bugs along the way!--Sabrina Romano\nAt least it has a working leader board system right?--Muhammad BDEEPP BDEEEEEPEEEEPE\nIt was a very fast moving game that you can play for hours and still be entertained.--Megan Fortier\nIt’s very fun to play--Jess Pereira\nit was gucci--TYLER PEEREEERE\nThe game was very detailed and fun--Brian Snider\ntres bien--christopher reitzel\n There were lots of different enemies which made it more fun and it was well designed-Lauren Forsythe\nThe graphics and color palette really fits the game type, it looks like a radar--Jacob Fritz\nit was fun to play, only made me rage a little bit more than normal--Sara Banic\nWhen i was able to spam quickly,\nit made the game really enjoyable to play.\n Spamming sucks, but the fact that I could use all my fingers to spam\n made it really enjoyable.--Noah Stolee",width/2,213);//gamer feed back
+};
+/**Void method
+ * Display for user interface
+ * */
+var additionalInfo = function(){//Additional info section has a mini bio about me
+    //This function, which is text and background rectangle only, creates the gamer feedback display, so it includes fills of black and white, textSize changes and text statements which take up alot of the lines of code
+    textAlign(CENTER,CENTER);//Text and background stuff
+    textFont(createFont("monospace Bold"));//Text and background stuff
+    fill(0);//Text and background stuff
+    stroke(0);//Text and background stuff
+    rect(0,0,width,height - 250);//Text and background stuff
+    fill(255,255,255);//Text and background stuff//Text and background stuff
+    text("Hello! \nMy name is Erich\nI am the designer, editor, debugger, \nprogrammer, illustrator, \nand creator of SPACEATTACK.io",width/2,35);
+    textSize(10);//Text and background stuff
+    text("I am super honoured that you have decided to look at this game and take the time to play it\nand hopefully leave feedback. A little bit of background about me, I am an honours student in \ngrade 11 currently and as a sport, I actually do kung fu. YES it is a sport. I have done it for\n8 years now. So a long long time. As a programmer however, I love to take on the challenges that\ncome along. This coding project, I spent an entire semester (4 months) diligently working away.\nAnother one my intrests is 3D printing and I am currently looking into 3D software and how it is \ncoded together as part of a post-project. And while typing this, I realized I did forget to\n mention one thing: in kung fu, I am an adult blue sash and over my years, I have gotten to break\nboards and cement slabs. As well, I compete in annual tournaments and have collected...well...\nmany trophies and medals, as well as plaques for special awards. And thats about it\nThank you for reading my little bio here. You can contact me for more information.\nOh and last thing...thank you to those whom I contacted to be game testers.\nThey were the first of the first to give their feedback of the game and helped at least fill the\npage a bit",width/2,176);//Mini bio
+    textSize(20);
+    text("Instagram: erich_mm_09\nSnapchat: erichm360",width/2,height/2 + 20);//Contact me here//if you want
+};
+/**Void method
+ * Display for user interface
+ * */
+var leaderboard = function(){//Display for the leader board
+    textFont(createFont("monospace Bold"));//Sets text
+    noStroke();//No stroke color
+    fill(0, 0, 0);//Fill black
+    rect(0,0,width,353);//Background box
+    rectMode(CENTER);//Rectmode set center
+    fill(208, 0, 255);//Creates podium color and draws podium
+    rect(width/2,253,150,200);
+    rect(width/2 - 150,278,150,150);
+    rect(width/2 + 150,292,150,107);
+    //Draws podium
+    rectMode(CORNER);//Rect mode set corner
+    fill(0, 0, 0);//Fill black
+    //draws triangles to give podium less of an intrusive feel
+    triangle(width/2,353,width/2 - 227,300,72,356);
+     triangle(width/2,353,width/2 + 227,300,534,356);
+     textSize(58);//Sets text size
+     noFill();//No fill
+     strokeWeight(5);//Sets stroke weight
+     //Draws the circles with numbers on the podium 
+     stroke(229, 232, 35);
+     ellipse(width/2,193,58,58);
+     fill(229,232,35);
+     text("1",width/2,191);
+     noFill();
+     stroke(230, 230, 230);
+     ellipse(width/2 - 147,246,58,58);
+     fill(230, 230, 230);
+     text("2",width/2 - 147,245);
+     noFill();
+     stroke(120, 63, 30);
+     ellipse(width/2 + 147,276,58,58);
+     fill(120, 63, 30);
+     text("3",width/2 + 147,275);
+     //Draws the circles with numbers on the podium 
+     //More text stuff that outputs the title and the people on the podium
+     fill(255, 255, 255);
+     textSize(39);
+     text("CAN YOU GET ON THE PODIUM?",width/2,50);
+     strokeWeight(1);
+     textSize(24);
+     textAlign(CENTER,CORNER);
+     text("Erich MacLean-32:56",width/2,145);
+     text("Sabrina Romano-25:3",width/2 - 147,197);
+     text("Muhammad-8:2",width/2 + 147,235);
+     //More text stuff that outputs the title and the people on the podium
+};
+/**Void method
+ * Display for user interface
+ * */
+var menuScreen = function(){//Menu screen function
+    var mousePos = new PVector(mouseX,mouseY);//sets mouse position so when the function is called, it updates the mouse position
+    textAlign(CENTER,CENTER);//Text stuff **rolling of the eyes**
+    textFont(createFont("monospace Bold"));//Text stuff
+    fill(0);//Text stuff
+    noStroke();//Text stuff
+    rect(0,280,width,height);//background box
+    stroke(255,255,255);//White stroke
+    ellipseMode(CENTER);//Sets ellipse mode center
+    var htp = new PVector(150,450);//Sets location for how to play button
+    var gf = new PVector(450,450);//Sets location for gamer feedback button
+    var ai = new PVector(width/2,500);//Sets location for additional info button
+    var lb = new PVector(width/2,400);//Sets location for leaderboard button
+    ellipse(htp.x,htp.y,150,150);//How to play//Places ellipse at set location
+    ellipse(gf.x,gf.y,150,150);//Gamer Feedback//Places ellipse at set location
+    ellipse(ai.x,ai.y,100,100);//Additional Info//Places ellipse at set location
+    ellipse(lb.x,lb.y,75,75);//Leaderboards//Places ellipse at set location
+    fill(255, 255, 255);//Even more text settings
+    textSize(19);//Even more text settings
+    text("HOW TO PLAY",htp.x,htp.y + 5);
+    text("GAMER\nFEEDBACK",gf.x,gf.y - 5);
+    textSize(15.25);
+    text("ADDITIONAL\nINFO",ai.x,ai.y);
+    text("LEADER\nBOARDS",lb.x,lb.y);
+    textSize(22);
+    text("LEFT CLICK TO PLAY\nHOVER OVER THE BUBBLES TO SEE THE INFORMATION",width/2,height/2);//Even more text settings
+    //If the mouse position is within the radius of the circles, show that screen
+    if (mousePos.dist(htp) <= 75){
+        howToPlay();
+    }
+    if (mousePos.dist(gf) <= 75){
+        gamerFeedback();
+    }
+    if (mousePos.dist(ai) <= 50){
+        additionalInfo();
+    }
+    if (mousePos.dist(lb) <= 75/2){
+        leaderboard();
+    }//If the mouse position is within the radius of the circles, show that screen
+};
+/**Parameter method
+ * Parameters set the position of the ufo
+ * */
+var title = function(x,y,r){//Title screen display//Parameters to set the position of the UFO
+background(0, 0, 0);//Background box
+textFont(createFont("monospace Bold Italic"));//Text font
+fill(255, 255, 255);//Text colour
+textSize(77);//Text size
+textAlign(CENTER);//Align text center
+text("SPACE ATTACK",width/2,55);//Title
+text(".io!",width/2,231);//Title
+textFont(createFont("monospace Bold"));//Text font
+stroke(255, 255, 255);//Outline color
+rotate(r);//Rotates ufo by parameter
+fill(0, 0, 0);//Fill black
+triangle(149 + x,167 + y,121 + x,153 + y,113 + x,198 + y);
+triangle(333 + x,172 + y,354 + x,162 + y,371 + x,205 + y);
+//Legs of ufo
+fill(33, 31, 31);//fill grey
+ellipse(244 + x,134 + y,276,100);//Draws ship
+fill(163, 163, 163,200);//Fill light grey with opacity
+arc(249 + x,111 + y,134,170,-180,0);//Draws glass bubble
+fill(153, 153, 153,255);
+ellipse(249 + x,113 + y,134,35);
+fill(207, 222, 71);//Fill bright yellow
+//Draws circles on UFO for detail
+ellipse(150 + x,129 + y,38,22);
+rotate(5);
+ellipse(244 + x,134 + y,48,31);
+resetMatrix();
+rotate(r);
+ellipse(333 + x,144 + y,40,29);
+//Draws circles on UFO for detail
+resetMatrix();//Fixes matrix
+fill(0);//Fixes fill
+};
+
+/**Parameter method
+ * Parameters set the position of the skull
+ * */
+var death = function(x,y,w,h,r){//Death function display that prints out the time at which the player died, as well as an x,y,w,h for the skull
+    fill(0);//Fill black
+    stroke(0);//Stroke black
+    rect(0,0,width,281);//Draw background box
+    fill(255,255,255);//Fill white
+    stroke(255,255,255);//Stroke white
+    rect(x,y,w,h,r);//Draws rectangle with radius
+    rect(x + w/4,y + 3 * h/4,w/2,w/2,r/5);//Draws a smaller one a little bit lower
+    ellipseMode(CENTER);//Ellipse mode set center
+    fill(0);//Fill black
+    //Draws eyes and mouth slits
+    ellipse(x + w/4,y + h/2,w/4,h/4);
+    ellipse(x + 3 *w/4,y + h/2,w/4,h/4);
+    ellipse(x +w/2,y + 7* h/9,w/6,h/6);
+    rectMode(CENTER);
+    rect(x + w/2,y + 4 * h/4,w/8,h/4,r/5);
+    rect(x + w/10 * 3.5,y + 4 * h/4,w/8,h/4,r/5);
+    rect(x + w/10 * 6.5,y + 4 * h/4,w/8,h/4,r/5);//Draws eyes and mouth slits
+    ellipseMode(CORNER);//Resets modes
+    rectMode(CORNER);//Resets modes
+    fill(255);//Fill white
+    textAlign(CENTER);//Resets modes
+    textSize(30);//text size
+    text("RIP\nYOU LASTED FOR " + hourT + ":" + minuteT + ":" + secondT + " GAME TIME\nYOU KILLED " + enemiesKilled + " ENEMIES",width/2,171);//Death message with time played and enemies killed
+};
+/**Void method
+ * Loops through everything with khan academys draw function
+ * */
+draw = function() {//Opens draw function
+    if (scene === 1){//If scene 1, draw opening screen
+title(4,21,-6,0,35);//Call title screen
+menuScreen(100,100,100,0,0);//Call menu bubbles
+ if (mouseIsPressed && mouseButton === LEFT){//If the mouse is pressed and the mouse button is the left button, change the scene to the game screen
+ /**Void method
+  * Changes scene num
+ * */
+     mouseClicked = function(){
+     scene = 2;//Set scene into 2
+     };
+ }
+    }
+    
+    if (scene === 2){//If scene is 2, show the game display
+        if (updatedEnemyCount === -50){//If the enemy count is -50 (default set from scene 3 to scene 2 because there were some errors when it was set back to 0)
+            updatedEnemyCount = enemyArray.length;//then set it to the enemy array length
+        }
+        ///PLAY GAME/////
+         background(0, 0, 0);//Background black
+    stroke(0, 0, 255);//Stroke blue
+    fill(0, 0, 0);//Fill black
+    ellipse(width/2,height/2,width,height);//Creates arena
+    strokeWeight(10);//Stroke weight 10
+translate(0,width);//Translates the grid so the screen can be rotated 90 degrees
+rotate(-90);//Rotates the screen
+arc(width/2,height/2,width,height,0,map(updatedEnemyCount,0,enemyNum,0,360));//Draws an arc with an angle that is a mapped version on the enemy number
+resetMatrix();//Fixes matrix
+strokeWeight(1);//Fixes stroke weight
+    wall.draw();//Draws player
+    
+    if (keyIsPressed === false){
+        keyP = 0;
+    }
+    if(keyIsPressed === true){
+        keyP++;
+    }
+    if(spamOnOff){
+        keyP = 1;
+    }
+    //println(keyP);
+    if (keyIsPressed && key.toString() === ' ' && keyP ===1){//If spacebar (and apparently all buttons) are pressed, add a new missile to the array
+            missileArray.push(new Missile(wall.mouse.x,wall.mouse.y,missileArray.length));//Add new missile to the missile array
+            playSound(getSound("retro/laser1"));//Play laser sound
+    }
+    for (var enemy = dead;enemy < enemyArray.length;enemy++){//Loops through all enemies in enemy array
+        enemyArray[enemy].draw();//Draws
+        enemyArray[enemy].update();//Updates
+        enemyArray[enemy].updateDirection(counter);//And updates the enemy some more
+        ///////////////////////////////////////////2
+        if (checkEnemyFromCenter(enemyArray[enemy].radius,wall.radius,enemyArray[enemy].pos,wall.pos)){//If the function that checks the distance from the enemy and the center returns true...
+            health -= enemyArray[enemy].enemyData[1];//Lower health by the enemies damage setting
+            despawn(enemyArray[enemy].index);//Calls despawn on the enemy in the enemies index
+            playSound(getSound("rpg/battle-magic"));//Play hit sound
+            if (health <= 0){//If player health is 0, change dead to twice enemy num (for good measure) so the loops stop, as well, loop through the enemy array and recreate all the enemies so when the game starts next, the enemies are all created 
+            dead = enemyNum * 2;
+            for (var cleanE = 0;cleanE < enemyNum;cleanE++){
+                
+                    randomSpawn = round(random(0,spawnLocations.length - 1));
+    enemyArray[cleanE] = (new Enemy(spawnLocations[randomSpawn].x,spawnLocations[randomSpawn].y,20,20,typePicker(),cleanE));//Reinstate all the enemies
+    updatedEnemyCount++;
+            }
+            health = 0;//Set health to 0
+            scene = 3;//Change scene to death screen
+            }
+        }
+        //////////////////////////////////////////2
+    }
+    for (var m = dead;m < missileArray.length;m++){//Loops through all the missile array
+        missileArray[m].draw();//Draws the missile
+        missileArray[m].update();//Updates the missile
+        ///////////////////////////////////////////3
+        if (checkMissileFromCenter(missileArray[m].pos,corner,width/2)){//If the function returns true based on distances, despawn the missile in the index
+            despawnMissile(missileArray[m].index);
+        }
+        //////////////////////////////////////////3
+        if (missileArray.length > 0){//If the missile has NOT despawned, loop through the enemies and decide whether the enemy is in contact with a missile
+        for (var enemies = 0;enemies < enemyArray.length;enemies++){
+            ///////////////////////////////////////////4
+            if(checkMissileFromEnemy(enemyArray[enemies].radius,missileArray[m].r,enemyArray[enemies].pos,missileArray[m].pos)){
+                //If the missile is in contact with enemy, the function will return true
+            despawnMissile(missileArray[m].index);//Despawns the missile
+            enemyArray[enemies].enemyData[0]--;//Lowers health of the enemy
+            if (enemyArray[enemies].enemyData[0] <= 0){//If the enemy has at 0 or less of its health, despawn it
+                health+=enemyArray[enemies].enemyData[4];//Add the bonus (only boss enemy does this) to player health
+                despawn(enemyArray[enemies].index);//Despawn enemy
+                enemiesKilled++;//Add to enemies killed in that round
+                playSound(getSound("rpg/battle-spell"));//Plays sound
+            }
+            enemies = enemyArray.length;//Sets the loop value to the enemy number
+            }
+            //////////////////////////////////////////4
+        }
+        }
+        
+    }
+    //Repspawning//
+    //Spawns a random amount of enemies based on how many are on the screen based on the amount of enemies while health is greater than 0
+    randomSpawner = round(random(0,100));
+    if (health > 0){
+    if (updatedEnemyCount === 0){
+        respawn(enemyNum);
+    }
+    if (updatedEnemyCount === enemyNum){
+        respawn(0);
+    }
+    if (updatedEnemyCount === (enemyNum - 1) && counter % 90 === 0){
+        respawn(round(random(0,1)));
+    }
+    if (updatedEnemyCount === (enemyNum - 2) && counter % 90 === 0){
+        respawn(round(random(0,2)));
+    }
+    if (updatedEnemyCount === (enemyNum - 3) && counter % 90 === 0){
+        respawn(round(random(0,3)));
+    }
+    if (updatedEnemyCount > 0 && updatedEnemyCount < (enemyNum - 3) && counter % 90 === 0){
+        respawn(round(random(1,3)));
+    }
+    //Spawns a random amount of enemies based on how many are on the screen based on the amount of enemies while health is greater than 0
+    }
+    //Respawning// 
+    //Controls the timer functions. If the health is zero, stop timing, every time counter % 60 is 0, one second has passed
+    if (health > 0){
+    counter++;
+    if (counter % 1800 === 0){
+        health+=enemyNum;
+    }
+    if (counter % 3600 === 0){
+        respawn(1,true,5);//Spawns boss enemy after every minute
+    }
+    if (counter % 60 === 0){
+        secondT++;       
+    }
+    if (secondT === 60){
+        secondT = 0;
+        minuteT++;
+    }
+    if (minuteT === 60){
+        minuteT = 0;
+        hourT++;
+    }
+    }//Controls the timer functions. If the health is zero, stop timing, every time counter % 60 is 0, one second has passed
+    //////////
+    }
+    
+    if (scene === 3){//If scene three, show death screen
+       death(width/2 - 50,15,100,100,250);//Death screen with stats
+       menuScreen(100,100,100,0,0);//Calls menu screen(hover bubbles
+          if (mouseIsPressed && mouseButton === LEFT){//If mouse is clicked
+          /**Void method
+  * Changes scene num
+ * */
+     mouseClicked = function(){//If on the death screen, and mouse is clicked, all the game variables are reset
+     scene = 2;
+     counter = 0;
+     secondT = 0;
+     minuteT = 0;
+     hourT = 0;
+     health = enemyNum * 5;
+     dead = 0;
+     updatedEnemyCount = -50;
+     enemiesKilled = 0;
+     //If on the death screen, and mouse is clicked, all the game variables are reset
+     };
+ }
+        ///DEATH SCREEN/////
+    }
+};//Closes draw loop
+}//Click to open game
