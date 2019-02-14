@@ -36,8 +36,6 @@ function Circle (x,y,r,a){
   	ellipse(0,0,this.d,this.d);
     
     line(0,0,r*sin(radians(this.a)),r*cos(radians(this.a)));
-    
-    text(this.a,20,20);
   }
   
   this.update = function(force1,force2){
