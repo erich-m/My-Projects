@@ -1,0 +1,295 @@
+//UPDATE NUMBER 75.1.4
+var obstacle = color(0);//Color variable of the blue bow
+var character = color(5, 255, 0);//Color variable of the character
+var charY = 10;//^^ but with y instead of x (U and D)
+var charX = 10;
+var charLength = 20;
+var charWidth = 20;
+
+//Maze Game Variable Light Version//
+noStroke();
+//Color Variables
+var wallColor = color(0,0,0);
+var pathColor = color(255,255,255);
+//Color Variables
+//Size Variables
+var wallSize = 20;
+var pathSize = 20;
+//Size variables
+var preConstruct = function(){
+//Stage1-MazeConstruct-Variables
+//No variables or parameters
+//Stage1-MazeConstruct-Variables
+//Stage1-MazeConstruct-Function
+    //var stage1MazeConstruct = function(){
+    background(wallColor);
+    fill(pathColor);
+        rect(10,10,380,380);
+    fill(wallColor);
+        rect(190,0,20,400);
+        rect(0,190,400,20);
+    //};
+//Stage1-MazeConstruct-Function
+};
+var maze = function(moduleXStart,moduleYStart){
+   
+//Stage2-MazeConstruct-Variables
+var stage2Loop;
+//Stage2-MazeConstruct-Variables
+//Stage2-MazeConstruct-Function
+    //var stage2MazeConstruct = function(moduleXStart,moduleYStart){
+    for (stage2Loop = 0;stage2Loop < 4;stage2Loop++){
+        fill(wallColor);
+    rect(moduleXStart + pathSize + 40* stage2Loop,moduleYStart,wallSize,180);
+    }
+    //};
+//Stage2-MazeConstruct-Function
+//Stage3-MazeConstruct-Variables
+var stage3to7PathArray = []; 
+var stage3Path1 = round(random(1,5));
+var stage3Path2 = round(random(1,5));
+var stage3PathProcessing=1;
+while (stage3to7PathArray.length < 2){
+    var pushToArrayCpu = round(random(0,1));
+    if (pushToArrayCpu === 1 && ((stage3PathProcessing%5)+1) !== stage3to7PathArray[0]){
+        stage3to7PathArray.push((stage3PathProcessing%5)+1);
+    }
+    stage3PathProcessing++;
+}
+stage3to7PathArray.sort();
+var stage3Loop;
+//Stage3-MazeConstruct-Variables
+//Stage3-MazeConstruct-Function
+    //var stage3MazeConstruct = function(moduleXStart,moduleYStart){
+    fill(pathColor);
+    for(stage3Loop = 0;stage3Loop <= 1;stage3Loop++){
+        rect(moduleXStart + pathSize,moduleYStart + 40 * (stage3to7PathArray[stage3Loop] - 1),pathSize,pathSize);
+    }
+    //};
+
+//Stage3-MazeConstruct-Function
+
+
+//Stage4-MazeConstruct-Variables
+var stage4Wall = round(random(stage3to7PathArray[0],stage3to7PathArray[1] - 1));
+//Stage4-MazeConstruct-Variables
+//Stage4-MazeConstruct-Function
+    //var stage4MazeConstruct = function(moduleXStart,moduleYStart){
+    fill(wallColor);
+    rect(moduleXStart + pathSize + wallSize,moduleYStart + pathSize + 40 * (stage4Wall - 1),wallSize,wallSize);
+    //};
+//Stage4-MazeConstruct-Function
+//Stage5-MazeConstruct-Variables
+var stage5PathOptions = [];
+for (var stage5Loop = 1;stage5Loop <= 5;stage5Loop++){
+    if (stage5Loop !== stage3to7PathArray[0] && stage5Loop !== stage3to7PathArray[1]){
+        stage5PathOptions.push(stage5Loop);
+    }
+}
+var stage5PathSelector = round(random(0,2));
+
+stage3to7PathArray.push(stage5PathOptions[stage5PathSelector]);
+//Stage5-MazeConstruct-Variables
+//Stage5-MazeConstruct-Function
+    //var stage5MazeConstruct = function(moduleXStart,moduleYStart){
+    fill(pathColor);
+    rect(moduleXStart + pathSize * 2 + wallSize,moduleYStart + 40 * (stage5PathOptions[stage5PathSelector]- 1),pathSize,pathSize);
+    //};
+//Stage5-MazeConstruct-Function
+
+//Stage7-MazeConstruct-Variables
+var stage7Options = [];
+var stage7Loop1;
+for (stage7Loop1 = 1;stage7Loop1 <= 5;stage7Loop1++){
+    if (stage3to7PathArray[0] !== stage7Loop1 && stage3to7PathArray[1] !== stage7Loop1 && stage3to7PathArray[2] !== stage7Loop1 && stage7Options.length < 2){
+        stage7Options.push(stage7Loop1);
+    }
+}
+
+
+
+var stage7Loop2 = 1;
+//Stage7-MazeConstruct-Variables
+//Stage7-MazeConstruct-Function
+    //var stage7MazeConstruct = function(moduleXStart,moduleYStart){
+    fill(pathColor);
+        rect(moduleXStart + 3 * pathSize + 2 * wallSize,moduleYStart + 40 * stage7Options[0] - 40,pathSize,pathSize);
+        rect(moduleXStart + 3 * pathSize + 2 * wallSize,moduleYStart + 40 * stage7Options[1] - 40,pathSize,pathSize);
+    //};
+//Stage7-MazeConstruct-Function
+//Stage6-MazeConstruct-Variables
+var stage6WallSelector = round(random(stage3to7PathArray[0],stage3to7PathArray[1]- 1));
+var stage6Loop1;
+var stage6Loop2;
+var stage6PathChecker = 0;
+for (stage6Loop1 = 0;stage6Loop1 <= stage3to7PathArray.length;stage6Loop1++){
+    if (stage3to7PathArray[stage6Loop1] === 1){
+        stage6WallSelector = 4;
+        stage6PathChecker++;
+    }}
+for (stage6Loop2 = 0;stage6Loop2 <= stage3to7PathArray.length;stage6Loop2++){
+if (stage3to7PathArray[stage6Loop2] === 5){
+    stage6WallSelector = 1;
+    stage6PathChecker++;
+}}
+if (stage6PathChecker === 0 || stage6PathChecker === 2){
+    stage6WallSelector = round(random(2,3));
+}
+if (stage6WallSelector > stage7Options[0]){
+    stage6WallSelector = stage7Options[0];
+}
+if (stage6WallSelector < stage7Options[1]){
+    stage6WallSelector = stage7Options[1] - 1;
+}
+//Stage6-MazeConstruct-Variables
+//Stage6-MazeConstruct-Function
+    fill(wallColor);
+    rect(moduleXStart + 2 * pathSize + 2 * wallSize,moduleYStart + 40 * (stage6WallSelector) - wallSize,wallSize,wallSize);
+//Stage6-MazeConstruct-Function
+//Stage8-MazeConstruct-Variables
+var stage8PathSelector1 = round(random(0,2));
+var stage8PathSelector2 =round(random(0,2));
+var stage8PathArray = [];
+while (stage8PathSelector1 === stage8PathSelector2){
+    stage8PathSelector1 = round(random(0,2));
+    stage8PathSelector2 =round(random(0,2));
+}
+stage8PathArray.push(stage3to7PathArray[stage8PathSelector1]);
+stage8PathArray.push(stage3to7PathArray[stage8PathSelector2]);
+stage8PathArray.sort();
+//Stage8-MazeConstruct-Variables
+//Stage8-MazeConstruct-Function
+    //var stage8MazeConstruct = function(moduleXStart,moduleYStart){
+    fill(pathColor);
+    rect(moduleXStart + 4 * pathSize + 3 * wallSize,moduleYStart + 40 * stage8PathArray[0] - 40,pathSize,pathSize);
+    rect(moduleXStart + 4 * pathSize + 3 * wallSize,moduleYStart + 40 * stage8PathArray[1] - 40,pathSize,pathSize);
+    //};
+//Stage8-MazeConstruct-Function
+//Stage9-MazeConstruct-Variables
+var stage9Wall = round(random(stage8PathArray[0],stage8PathArray[1] - 1));
+if (stage8PathArray[1] === 5){
+    stage9Wall = 4;
+}
+//Stage9-MazeConstruct-Variables
+//Stage9-MazeConstruct-Function
+  //var stage9MazeConstruct = function(moduleXStart,moduleYStart){
+    fill(wallColor);
+    rect(moduleXStart + 4 * pathSize + 4 * wallSize,moduleYStart + pathSize + 40 * (stage9Wall - 1),wallSize,wallSize);
+    //};
+//Stage9-MazeConstruct-Function
+};
+var moduleAdjustment = function(tsnX,tsnY,rotD){
+    pushMatrix();
+    translate(tsnX,tsnY);
+    rotate(rotD);
+    maze(0,0);
+    popMatrix();
+};
+var rot = {
+    mod1 : round(random(0,3)),
+    mod2 : round(random(0,3)),
+    mod3 : round(random(0,3)),
+    mod4 : round(random(0,3))
+};
+var modTsn = {
+    mod1 : {
+        xPos : [10,190,190,10],
+        yPos : [10,10,190,190]
+    },
+    mod2 : {
+        xPos : [210,390,390,210],
+        yPos : [10,10,190,190]
+    },
+    mod3 : {
+        xPos : [10,190,190,10],
+        yPos : [210,210,390,390]
+    },
+    mod4 : {
+        xPos : [210,390,390,210],
+        yPos : [210,210,390,390]
+    }
+    };
+var counter = 0;
+var mazeGenerator = function(){
+    
+        if (counter === 0){
+preConstruct();
+moduleAdjustment(modTsn.mod1.xPos[rot.mod1],modTsn.mod1.yPos[rot.mod1],rot.mod1 * 90);
+moduleAdjustment(modTsn.mod2.xPos[rot.mod2],modTsn.mod2.yPos[rot.mod2],rot.mod2 * 90);
+moduleAdjustment(modTsn.mod3.xPos[rot.mod3],modTsn.mod3.yPos[rot.mod3],rot.mod3 * 90);
+moduleAdjustment(modTsn.mod4.xPos[rot.mod4],modTsn.mod4.yPos[rot.mod4],rot.mod4 * 90);
+}
+if (counter !== 1){
+counter+=1;}
+
+fill(255, 0, 0);//Portals Red
+rect(10,10,20,20);//Start square
+rect(370,370,20,20);//End square
+
+fill(255, 157, 0);//Portals Orange
+rect(210,10,20,20);//From maze 1
+rect(170,170,20,20);//Maze 1 to maze 2
+
+fill(145, 0, 255);//Portals Purple
+rect(10,210,20,20);//From maze 2
+rect(370,170,20,20);//Maze 2 to maze 3
+
+fill(0, 68, 255);//Portals Blue
+rect(210,210,20,20);//From maze 3
+rect(170,370,20,20);//Maze 3 to maze 4
+};
+var updateFix = function(){
+    fill(255);
+    rect(charX,charY,charWidth,charLength);
+};
+draw = function() {
+    mazeGenerator();
+    
+    var moveUpColorCheck = get(charX, charY - 2.5);
+var moveDownColorCheck = get(charX, charY + charLength + 2.5);
+var moveRightColorCheck = get(charX + charWidth + 2.5,charY);
+var moveLeftColorCheck = get(charX - 2.5,charY);
+
+keyPressed = function() {//If key Pressed function
+//Each if statement checks the keyCode and checks the corresponding color (direction referenced to char) to make sure it does not equal the wall color, and if the expression is true, it will edit the coordinates of the character accordingly
+    if (keyCode === UP && moveUpColorCheck !== obstacle){
+        updateFix();
+        charY -=charLength;
+    }
+    if (keyCode === DOWN && moveDownColorCheck !== obstacle){
+        updateFix();
+        charY +=charLength;
+    }
+    if (keyCode === LEFT && moveLeftColorCheck !== obstacle){
+        updateFix();
+        charX -=charWidth;
+    }
+    if (keyCode === RIGHT && moveRightColorCheck !== obstacle){
+        updateFix();
+        charX +=charWidth;
+    }
+
+    
+    
+};//End of keyPressed function block
+if (((charX)=== 170) && ((charY)===170)){//Checks if char matches portal square
+                    charX = 210;//Moves to other portal
+                    charY = 10;//Moves to other portal
+                }
+                if (((charX)=== 370) && ((charY)===170)){
+                    charX = 10;
+                    charY = 210;
+                }
+                if (((charX)=== 170) && ((charY)===370)){
+                    charX = 210;
+                    charY = 210;
+                }
+                if (((charX)=== 370) && ((charY)===370)){
+                    charX = 10;
+                    charY = 10;
+                    mazeGenerator();
+                }
+fill(character);//Character color
+
+rect(charX,charY,charWidth,charLength);//Character square
+};
