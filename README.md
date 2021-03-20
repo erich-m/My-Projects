@@ -1,3 +1,2 @@
 # My-Projects
-Just a short compilation of major projects or concepts I derived from others or created entirely on my own. 
-All projects are designed by me.
+THis repo contains a few of my working projects that I have worked on. I do not update this repo regularly
